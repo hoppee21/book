@@ -73,5 +73,6 @@ def txt_to_epub(txt_path, epub_path, cover_image_path=None, chapter_pattern=None
     except Exception as e:
         print(f"Error writing EPUB file: {str(e)}")
 
+
 # Using a specific pattern
 # txt_to_epub('books/《我的老婆是执政官》.txt', 'books/《我的老婆是执政官》.epub', "books/cover1.png", r'(===\s*.*?\s*===)')
