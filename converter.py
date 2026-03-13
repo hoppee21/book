@@ -23,36 +23,37 @@ from PyQt5.QtWidgets import (
 from text2epub import ConversionError, txt_to_epub
 
 
+def _create_icon():
+    """Creates a modern, programmatic app icon to replace the default OS window icon."""
+    pixmap = QPixmap(64, 64)
+    pixmap.fill(Qt.transparent)
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+
+    # Draw background rounded rect
+    painter.setBrush(QColor("#3498db"))
+    painter.setPen(Qt.NoPen)
+    painter.drawRoundedRect(8, 8, 48, 48, 12, 12)
+
+    # Draw decorative white lines (representing text in a book)
+    painter.setBrush(QColor("#ffffff"))
+    painter.drawRoundedRect(18, 22, 28, 5, 2, 2)
+    painter.drawRoundedRect(18, 33, 28, 5, 2, 2)
+    painter.drawRoundedRect(18, 44, 18, 5, 2, 2)
+
+    painter.end()
+    return QIcon(pixmap)
+
+
 class App(QWidget):
     def __init__(self):
         super().__init__()
         self.txt_file_path = None
         self.cover_file_path = None
-        self.setWindowIcon(self._create_icon())  # Replaces default OS window icon
+        self.setWindowIcon(_create_icon())  # Replaces the default OS window icon
         self._init_ui()
         self._apply_stylesheet()
-
-    def _create_icon(self):
-        """Creates a modern, programmatic app icon to replace the default OS window icon."""
-        pixmap = QPixmap(64, 64)
-        pixmap.fill(Qt.transparent)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        # Draw background rounded rect
-        painter.setBrush(QColor("#3498db"))
-        painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(8, 8, 48, 48, 12, 12)
-
-        # Draw decorative white lines (representing text in a book)
-        painter.setBrush(QColor("#ffffff"))
-        painter.drawRoundedRect(18, 22, 28, 5, 2, 2)
-        painter.drawRoundedRect(18, 33, 28, 5, 2, 2)
-        painter.drawRoundedRect(18, 44, 18, 5, 2, 2)
-
-        painter.end()
-        return QIcon(pixmap)
 
     def _init_ui(self):
         self.setWindowTitle("TXT to EPUB Converter")
