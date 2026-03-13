@@ -1,13 +1,12 @@
 # TXT to EPUB Converter
 
 ## Overview
-A modern PyQt5 desktop app that converts plain text files (`*.txt`) into EPUB ebooks. The interface is organized into polished sections for metadata, file selection, and chapter parsing.
+This project provides a PyQt5 desktop interface to convert plain text files (`*.txt`) into EPUB ebooks. It supports metadata editing, optional cover images, and regex-based chapter splitting.
 
 ## Highlights
-- Clean, modern UI styling with grouped cards and a conversion status bar.
-- Metadata controls for title, author, language, and unique book ID.
-- File pickers for source TXT, optional cover image, and custom EPUB output path.
-- Regex-based chapter splitting with safe validation and clear error messages.
+- Improved and grouped UI sections for metadata, file selection, and chapter detection.
+- Stronger conversion validation with clear error dialogs.
+- Safer chapter parsing with regex validation and helpful failure messages.
 - HTML-escaped content generation to avoid malformed chapter output.
 
 ## Requirements
@@ -34,4 +33,4 @@ If chapters are delimited like `=== Chapter 1 ===`, `=== Chapter 2 ===`, use:
 (===\s*.*?\s*===)
 ```
 
-Leave the chapter pattern empty to create one chapter from the full text.
+Leave the chapter pattern empty to create a single chapter for the full text.
