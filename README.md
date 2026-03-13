@@ -1,27 +1,37 @@
 # TXT to EPUB Converter
 
 ## Overview
-This application provides a graphical user interface to convert text files (`*.txt`) into EPUB format, suitable for e-readers. It supports custom book metadata, optional cover images, and chapter division based on a user-defined regex pattern.
+A modern PyQt5 desktop app that converts plain text files (`*.txt`) into EPUB ebooks. The interface is organized into polished sections for metadata, file selection, and chapter parsing.
 
-## Features
-- **File Conversion:** Convert any plain text file into an EPUB ebook.
-- **Metadata Customization:** Set the title, author, language, and a unique book ID for the EPUB.
-- **Chapter Detection:** Automatically divide the book into chapters based on a regex pattern. The default regex pattern is None which will trade the whole book as one chapter. This may cause a problem as the reader app may not be able to load a very large chapter.
-- **Cover Image:** Add a cover image to the EPUB from PNG, JPG, or JPEG files.
-- **Language Selection:** Choose the book's language from a predefined list including English, Chinese, Spanish, French, and German.
+## Highlights
+- Clean, modern UI styling with grouped cards and a conversion status bar.
+- Metadata controls for title, author, language, and unique book ID.
+- File pickers for source TXT, optional cover image, and custom EPUB output path.
+- Regex-based chapter splitting with safe validation and clear error messages.
+- HTML-escaped content generation to avoid malformed chapter output.
 
 ## Requirements
-- Python 3.6 or higher
+- Python 3.8+
 - PyQt5
 - ebooklib
 
-To install the necessary Python packages, run:
+Install dependencies:
+
 ```bash
 pip install PyQt5 ebooklib
 ```
 
-## Example of Chapter Detection
-For books where chapters are demarcated with lines like === Chapter 1 ===, === Chapter 2 ===, etc., enter the following regex pattern in the Chapter Pattern input field:
+## Run
+
 ```bash
+python converter.py
+```
+
+## Chapter Pattern Example
+If chapters are delimited like `=== Chapter 1 ===`, `=== Chapter 2 ===`, use:
+
+```regex
 (===\s*.*?\s*===)
 ```
+
+Leave the chapter pattern empty to create one chapter from the full text.
