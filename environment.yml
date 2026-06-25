@@ -1,0 +1,10 @@
+name: book
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10
+  - pyqt=5.15
+  - pip
+  - pip:
+      - ebooklib>=0.18,<1

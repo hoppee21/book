@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.conda/
+.conda_pkgs/
+.idea/
+build/
+dist/
+*.egg-info/
+*.epub
+.DS_Store

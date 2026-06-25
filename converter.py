@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 from uuid import uuid4
 
 from PyQt5.QtCore import Qt
@@ -21,6 +22,9 @@ from PyQt5.QtWidgets import (
 )
 
 from text2epub import ConversionError, txt_to_epub
+
+APP_NAME = "TXT to EPUB Converter"
+IS_MACOS = sys.platform == "darwin"
 
 
 def _create_icon():
@@ -46,17 +50,40 @@ def _create_icon():
     return QIcon(pixmap)
 
 
+def _compact_path(path):
+    path_text = str(path)
+    home = str(Path.home())
+    if path_text == home:
+        return "~"
+    if path_text.startswith(home + os.sep):
+        return "~" + path_text[len(home):]
+    return path_text
+
+
+def _default_epub_path(txt_path):
+    return str(Path(txt_path).with_suffix(".epub"))
+
+
+def _ensure_epub_suffix(path):
+    output = Path(path)
+    if output.suffix.lower() == ".epub":
+        return str(output)
+    return str(output.with_name(output.name + ".epub"))
+
+
 class App(QWidget):
     def __init__(self):
         super().__init__()
         self.txt_file_path = None
         self.cover_file_path = None
+        self.output_file_path = None
+        self.last_directory = str(Path.home())
         self.setWindowIcon(_create_icon())  # Replaces the default OS window icon
         self._init_ui()
         self._apply_stylesheet()
 
     def _init_ui(self):
-        self.setWindowTitle("TXT to EPUB Converter")
+        self.setWindowTitle(APP_NAME)
         self.resize(680, 580)
 
         # Main Layout
@@ -123,6 +150,10 @@ class App(QWidget):
         group.setLayout(form)
         return group
 
+    def _prepare_path_label(self, label):
+        label.setWordWrap(True)
+        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
     def _build_file_group(self):
         group = QGroupBox("Source Files")
         self._add_shadow(group)
@@ -139,6 +170,7 @@ class App(QWidget):
 
         self.txt_path_label = QLabel("No text file selected")
         self.txt_path_label.setObjectName("pathLabel")
+        self._prepare_path_label(self.txt_path_label)
 
         txt_layout.addWidget(self.txt_button)
         txt_layout.addWidget(self.txt_path_label, 1)
@@ -151,12 +183,26 @@ class App(QWidget):
 
         self.cover_path_label = QLabel("No cover image selected")
         self.cover_path_label.setObjectName("pathLabel")
+        self._prepare_path_label(self.cover_path_label)
 
         cover_layout.addWidget(self.cover_button)
         cover_layout.addWidget(self.cover_path_label, 1)
 
+        output_layout = QHBoxLayout()
+        self.output_button = QPushButton("Choose Output...")
+        self.output_button.setCursor(Qt.PointingHandCursor)
+        self.output_button.clicked.connect(self.open_output_file)
+
+        self.output_path_label = QLabel("Output will use the text file name")
+        self.output_path_label.setObjectName("pathLabel")
+        self._prepare_path_label(self.output_path_label)
+
+        output_layout.addWidget(self.output_button)
+        output_layout.addWidget(self.output_path_label, 1)
+
         wrapper.addLayout(txt_layout)
         wrapper.addLayout(cover_layout)
+        wrapper.addLayout(output_layout)
         group.setLayout(wrapper)
         return group
 
@@ -169,9 +215,9 @@ class App(QWidget):
         wrapper.setSpacing(8)
 
         self.chapter_input = QLineEdit(self)
-        self.chapter_input.setPlaceholderText(r"Optional regex, e.g. (===\s*.*?\s*===)")
+        self.chapter_input.setPlaceholderText(r"Blank = auto-detect, or enter regex e.g. ^第.*?章.*$")
 
-        hint = QLabel("Leave empty to create a single chapter from the full text.")
+        hint = QLabel("Leave empty to auto-detect common chapter headings; if none are found, a single chapter is created.")
         hint.setObjectName("hintLabel")
 
         wrapper.addWidget(self.chapter_input)
@@ -210,7 +256,7 @@ class App(QWidget):
     def _apply_stylesheet(self):
         self.setStyleSheet("""
             QWidget {
-                font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+                font-family: 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
                 font-size: 10pt;
                 color: #2c3e50;
                 background-color: #f4f6f9;
@@ -395,12 +441,15 @@ class App(QWidget):
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Select a text file",
-            "",
-            "Text Files (*.txt)",
+            self.last_directory,
+            "Text Files (*.txt *.text);;All Files (*)",
         )
         if filename:
             self.txt_file_path = filename
-            self.txt_path_label.setText(filename)
+            self.last_directory = str(Path(filename).parent)
+            self.output_file_path = _default_epub_path(filename)
+            self._set_path_label(self.txt_path_label, filename)
+            self._set_path_label(self.output_path_label, self.output_file_path)
             self.status_label.setText("Text file selected")
             self.status_label.setStyleSheet("color: #27ae60;")
 
@@ -408,14 +457,39 @@ class App(QWidget):
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Select a cover image",
-            "",
-            "Image Files (*.png *.jpg *.jpeg)",
+            self.last_directory,
+            "Image Files (*.png *.jpg *.jpeg);;All Files (*)",
         )
         if filename:
             self.cover_file_path = filename
-            self.cover_path_label.setText(filename)
+            self.last_directory = str(Path(filename).parent)
+            self._set_path_label(self.cover_path_label, filename)
             self.status_label.setText("Cover image selected")
             self.status_label.setStyleSheet("color: #27ae60;")
+
+    def open_output_file(self):
+        default_path = self.output_file_path
+        if not default_path and self.txt_file_path:
+            default_path = _default_epub_path(self.txt_file_path)
+        if not default_path:
+            default_path = str(Path(self.last_directory) / "book.epub")
+
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Choose output EPUB",
+            default_path,
+            "EPUB Files (*.epub);;All Files (*)",
+        )
+        if filename:
+            self.output_file_path = _ensure_epub_suffix(filename)
+            self.last_directory = str(Path(self.output_file_path).parent)
+            self._set_path_label(self.output_path_label, self.output_file_path)
+            self.status_label.setText("Output path selected")
+            self.status_label.setStyleSheet("color: #27ae60;")
+
+    def _set_path_label(self, label, path):
+        label.setText(_compact_path(path))
+        label.setToolTip(str(path))
 
     def reset_form(self):
         self.title_input.clear()
@@ -425,8 +499,13 @@ class App(QWidget):
         self.chapter_input.clear()
         self.txt_file_path = None
         self.cover_file_path = None
+        self.output_file_path = None
         self.txt_path_label.setText("No text file selected")
+        self.txt_path_label.setToolTip("")
         self.cover_path_label.setText("No cover image selected")
+        self.cover_path_label.setToolTip("")
+        self.output_path_label.setText("Output will use the text file name")
+        self.output_path_label.setToolTip("")
         self.status_label.setText("Form reset")
         self.status_label.setStyleSheet("color: #27ae60;")
 
@@ -439,14 +518,17 @@ class App(QWidget):
             QMessageBox.warning(self, "Invalid File", "The selected text file no longer exists.")
             return
 
-        epub_path = os.path.splitext(self.txt_file_path)[0] + ".epub"
+        epub_path = self.output_file_path or _default_epub_path(self.txt_file_path)
+        epub_path = _ensure_epub_suffix(epub_path)
 
         chapter_pattern = self.chapter_input.text().strip() or None
         book_id = self.id_input.text().strip() or str(uuid4())
-        book_title = self.title_input.text().strip() or os.path.basename(self.txt_file_path)
+        book_title = self.title_input.text().strip() or Path(self.txt_file_path).stem
         author_name = self.author_input.text().strip() or "Unknown Author"
         book_language = self.language_combo.currentData(Qt.UserRole)
 
+        self.convert_button.setEnabled(False)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             txt_to_epub(
                 txt_path=self.txt_file_path,
@@ -463,8 +545,13 @@ class App(QWidget):
             self.status_label.setStyleSheet("color: #e74c3c;")  # Danger red
             QMessageBox.critical(self, "Conversion Error", str(exc))
             return
+        finally:
+            QApplication.restoreOverrideCursor()
+            self.convert_button.setEnabled(True)
 
-        self.status_label.setText(f"Success: {epub_path}")
+        self.output_file_path = epub_path
+        self._set_path_label(self.output_path_label, epub_path)
+        self.status_label.setText(f"Success: {_compact_path(epub_path)}")
         self.status_label.setStyleSheet("color: #27ae60;")  # Success green
 
         QMessageBox.information(
@@ -474,12 +561,25 @@ class App(QWidget):
         )
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
+def _enable_high_dpi():
+    for attribute_name in ("AA_EnableHighDpiScaling", "AA_UseHighDpiPixmaps"):
+        attribute = getattr(Qt, attribute_name, None)
+        if attribute is not None:
+            QApplication.setAttribute(attribute, True)
 
-    # Fusion style establishes a very clean cross-platform baseline
-    # to layer the custom stylesheet on without native OS interference.
-    app.setStyle("Fusion")
+
+def _configure_app(app):
+    app.setApplicationName(APP_NAME)
+    app.setOrganizationName("hoppee21")
+    if not IS_MACOS:
+        # Fusion style establishes a clean cross-platform baseline for the custom stylesheet.
+        app.setStyle("Fusion")
+
+
+if __name__ == "__main__":
+    _enable_high_dpi()
+    app = QApplication(sys.argv)
+    _configure_app(app)
 
     ex = App()
     ex.show()
